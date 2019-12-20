@@ -2,7 +2,7 @@
 
 This repository performs a performance test on the [Xdelta library for Go](http://github.com/konsorten/go-xdelta). 
 
-It is using binary releases of [Electron](https://github.com/electron/electron).
+It is using binary releases of [Electron](https://github.com/electron/electron). For reference testing it uses the original GPL build of [Xdelta](https://github.com/jmacd/xdelta-gpl).
 
 To run all the tests, call the following command:
 
@@ -10,7 +10,7 @@ To run all the tests, call the following command:
 go test -v
 ```
 
-The library assumes that the Xdelta for Go source code is located in the sibling-directory `../go-xdelta`.
+The library assumes that the Xdelta for Go source code is located in the sibling-directory `../go-xdelta`. See the `go.mod`file for details.
 
 ## License
 
