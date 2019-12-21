@@ -18,8 +18,6 @@ type testFullRoundtrip_Context struct {
 	ToFilePath      string
 	PatchFilePath   string
 	AppliedFilePath string
-
-	ToFileHash []byte
 }
 
 func TestFullRoundtrip(t *testing.T) {
@@ -157,6 +155,25 @@ func testFullRoundtrip_ApplyPatch(t *testing.T, ctx *testFullRoundtrip_Context) 
 
 func testFullRoundtrip_CompareHash(t *testing.T, ctx *testFullRoundtrip_Context) {
 	// open the files
+	toFile, err := os.Open(ctx.ToFilePath)
+	if err != nil {
+		t.Fatalf("Failed to open TO file: %v", err)
+	}
+	defer toFile.Close()
+
+	// calculate hash
+	toHash := sha1.New()
+
+	_, err = io.Copy(toHash, toFile)
+	if err != nil {
+		t.Fatalf("Failed to hash TO file: %v", err)
+	}
+
+	toFile.Close()
+
+	toHashResult := toHash.Sum(nil)
+
+	// open the files
 	appliedFile, err := os.Open(ctx.AppliedFilePath)
 	if err != nil {
 		t.Fatalf("Failed to open APPLIED file: %v", err)
@@ -178,7 +195,7 @@ func testFullRoundtrip_CompareHash(t *testing.T, ctx *testFullRoundtrip_Context)
 	// compare
 	t.Logf("APPLIED file hash: %x", appliedHashResult)
 
-	if !bytes.Equal(ctx.ToFileHash, appliedHashResult) {
+	if !bytes.Equal(toHashResult, appliedHashResult) {
 		t.Fatalf("File hash of TO and APPLIED file are different")
 	}
 }
