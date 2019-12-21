@@ -19,7 +19,6 @@ type testFullRoundtrip_Context struct {
 	PatchFilePath   string
 	AppliedFilePath string
 
-	Header     []byte // set during seeding
 	ToFileHash []byte
 }
 
@@ -67,11 +66,11 @@ func testFullRoundtrip_CreatePatch(t *testing.T, ctx *testFullRoundtrip_Context)
 
 	// prepare encoder
 	options := xd.EncoderOptions{
-		FileID:    "TestFullRoundtrip",
-		FromFile:  fromFile,
-		ToFile:    toFile,
-		PatchFile: patchFile,
-		Header:    ctx.Header,
+		FileID:      "TestFullRoundtrip",
+		FromFile:    fromFile,
+		ToFile:      toFile,
+		PatchFile:   patchFile,
+		EnableStats: true,
 	}
 
 	enc, err := xd.NewEncoder(options)
@@ -85,14 +84,29 @@ func testFullRoundtrip_CreatePatch(t *testing.T, ctx *testFullRoundtrip_Context)
 	if err != nil {
 		t.Fatalf("Failed to create patch: %v", err)
 	}
+
+	// dump stats
+	enc.DumpStatsToStdout()
 }
 
 func testFullRoundtrip_DumpPatchInfo(t *testing.T, ctx *testFullRoundtrip_Context) {
-	patchFileStat, err := os.Stat(ctx.PatchFilePath)
+	fromFileStat, err := os.Stat(ctx.FromFilePath)
 	if err != nil {
-		t.Fatalf("Failed to get patch filesize: %v", err)
+		t.Fatalf("Failed to get FROM filesize: %v", err)
 	}
 
+	toFileStat, err := os.Stat(ctx.ToFilePath)
+	if err != nil {
+		t.Fatalf("Failed to get TO filesize: %v", err)
+	}
+
+	patchFileStat, err := os.Stat(ctx.PatchFilePath)
+	if err != nil {
+		t.Fatalf("Failed to get PATCH filesize: %v", err)
+	}
+
+	t.Logf("FROM  file size: %v (%v)", fromFileStat.Size(), humanize.Bytes(uint64(fromFileStat.Size())))
+	t.Logf("TO    file size: %v (%v)", toFileStat.Size(), humanize.Bytes(uint64(toFileStat.Size())))
 	t.Logf("PATCH file size: %v (%v)", patchFileStat.Size(), humanize.Bytes(uint64(patchFileStat.Size())))
 }
 
@@ -118,10 +132,11 @@ func testFullRoundtrip_ApplyPatch(t *testing.T, ctx *testFullRoundtrip_Context) 
 
 	// prepare decoder
 	options := xd.DecoderOptions{
-		FileID:    "TestFullRoundtrip",
-		FromFile:  fromFile,
-		ToFile:    appliedFile,
-		PatchFile: patchFile,
+		FileID:      "TestFullRoundtrip",
+		FromFile:    fromFile,
+		ToFile:      appliedFile,
+		PatchFile:   patchFile,
+		EnableStats: true,
 	}
 
 	dec, err := xd.NewDecoder(options)
@@ -130,22 +145,14 @@ func testFullRoundtrip_ApplyPatch(t *testing.T, ctx *testFullRoundtrip_Context) 
 	}
 	defer dec.Close()
 
-	// retrieve header
-	headerChannel := make(chan []byte, 1)
-	dec.Header = headerChannel
-
 	// apply the patch
 	err = dec.Process(context.TODO())
 	if err != nil {
 		t.Fatalf("Failed to apply patch: %v", err)
 	}
 
-	// compare the header
-	readHeader := <-headerChannel
-
-	if !bytes.Equal(ctx.Header, readHeader) {
-		t.Fatalf("Header of PATCH file does not match")
-	}
+	// dump stats
+	dec.DumpStatsToStdout()
 }
 
 func testFullRoundtrip_CompareHash(t *testing.T, ctx *testFullRoundtrip_Context) {
